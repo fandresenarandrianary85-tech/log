@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Magasin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Lobster+Two:wght@400;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="sysbar">
+      <nav class="menu-lite" aria-label="menu principal">
+        <button type="button">Option</button>
+        <button type="button">Edition</button>
+        <button type="button">Historique</button>
+        <button type="button">Config</button>
+        <button type="button">Outils</button>
+        <button type="button" id="menu-admin" style="display: none;">Admin</button>
+        <button type="button" id="menu-logout">Déconnexion</button>
+      </nav>
+      <div class="user-info-bar">
+        <span id="user-role-badge" class="user-badge"></span>
+      </div>
+      <div class="window-controls" aria-hidden="true">
+        <span></span><span></span><span></span>
+      </div>
+    </header>
+
+    <main class="shell" style="display: none;">
+      <aside class="icon-rail" aria-label="actions rapides">
+        <button class="rail-btn" title="Calendrier">&#128197;</button>
+        <button class="rail-btn" title="Menu">&#9776;</button>
+        <button class="rail-btn" title="Valeur de stock" data-hint="Valeur de Stock">&#9711;</button>
+        <button class="rail-btn" title="A commander" data-hint="A Commander">&#9660;</button>
+        <button class="rail-btn" title="Creer article" data-hint="Creer article">&#127991;</button>
+        <button class="rail-btn" title="Recap qtt vendu" data-hint="Recap qtt vendu">&#9679;</button>
+        <button class="rail-btn rail-btn-caisse" title="Caisse" data-hint="Caisse / Vente">&#128176;</button>
+      </aside>
+
+      <section class="content">
+        <div class="tabs">
+          <button class="tab is-active" data-module="stock">Stock</button>
+          <button class="tab" data-module="client">Client</button>
+          <button class="tab" data-module="fournisseur">Fournisseur</button>
+          <button class="tab" data-module="decaissement">Decaissement</button>
+        </div>
+
+        <div class="actions" id="toolbar"></div>
+
+        <section class="grid-panel">
+          <div class="grid-head">
+            <h1 id="module-title">Stock</h1>
+            <input id="quick-search" type="search" placeholder="Recherche rapide" />
+          </div>
+          <div class="grid-wrap">
+            <table id="data-table"></table>
+          </div>
+          <div class="grid-foot" id="table-footer"></div>
+        </section>
+      </section>
+    </main>
+
+    <dialog id="appro-modal">
+      <form method="dialog" class="modal-form">
+        <div class="appro-top">
+          <div class="top-left top-block">
+            <label>
+              DATE
+              <input id="appro-date" type="date" />
+            </label>
+            <label>
+              Echeance :
+              <input id="appro-echeance" type="number" min="0" value="30" /> jours
+            </label>
+          </div>
+
+          <div class="top-middle top-block">
+            <div class="appro-filter-title">Afficher</div>
+            <label class="radio-line"><input type="radio" name="appro-afficher" checked /> Tous les articles</label>
+            <label class="radio-line"><input type="radio" name="appro-afficher" /> Article du fournisseur</label>
+            <label>
+              EMPLACEMENT
+              <input id="appro-emplacement" type="text" value="Magasin" />
+            </label>
+            <label>
+              FOURNISSEUR
+              <input id="appro-fournisseur" type="text" value="AC" placeholder="Nom fournisseur" />
+            </label>
+          </div>
+
+          <div class="top-right top-block">
+            <label>
+              N FACTURE
+              <input id="appro-facture" type="text" />
+            </label>
+            <label>
+              N BL
+              <input id="appro-bl" type="text" />
+            </label>
+          </div>
+        </div>
+
+        <div class="appro-main">
+          <div class="appro-table-wrap">
+            <table id="appro-table">
+              <thead>
+                <tr>
+                  <th>CODE</th>
+                  <th>DESIGNATION</th>
+                  <th>PRIX D'ACHAT</th>
+                  <th>PRIX DE VENTE</th>
+                  <th>QTE</th>
+                  <th>MONTANT</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+
+          <aside class="appro-side">
+            <p class="total-title">TOTAL ACHAT</p>
+            <p class="total-value" id="appro-total">0 Ar</p>
+            <div class="print-box">
+              <p>Imprimer recap</p>
+              <label><input id="print-ticket" type="checkbox" /> Sur ticket</label>
+              <label><input id="print-a4" type="checkbox" /> Sur papier A4</label>
+            </div>
+            <button type="button" id="appro-validate">Valider</button>
+            <button type="button" id="appro-follow">A suivre</button>
+            <button type="button" id="appro-clear">Supprimer</button>
+            <button value="cancel" class="ghost" type="submit" id="appro-close">Fermer</button>
+          </aside>
+        </div>
+
+        <div class="appro-mode-bar">
+          <div class="appro-mode-tabs">
+            <button type="button" id="mode-creation" class="mode-btn is-active">CREATION</button>
+            <button type="button" id="mode-reappro" class="mode-btn">REAPPRO</button>
+          </div>
+          <span class="mode-hint">Choisir le mode de saisie</span>
+        </div>
+
+        <div id="creation-area" class="creation-area">
+          <div class="creation-row creation-row-top">
+            <label>CODE<input id="appro-code" placeholder="" /></label>
+            <label>DESIGNATION<input id="appro-designation" placeholder="" /></label>
+            <label>FAMILLE<input id="appro-family" placeholder="" /></label>
+            <button type="button" id="appro-family-pick">...</button>
+          </div>
+
+          <div class="creation-row creation-row-bottom">
+            <label>QTE<input id="appro-qte" type="number" min="0" step="0.01" value="0" /></label>
+            <label>PRIX D'ACHAT<input id="appro-prix" type="number" min="0" step="0.01" value="0" /></label>
+            <label>PRIX DE VENTE<input id="appro-vente" type="number" min="0" step="0.01" value="0" /></label>
+            <label>MONTANT (Achat)<input id="appro-montant" type="number" readonly value="0" /></label>
+            <label>SEUIL REAPPRO<input id="appro-seuil" type="number" min="0" step="0.01" value="0" /></label>
+            <button type="button" id="appro-add-line" class="add-btn">AJOUTER</button>
+          </div>
+
+          <div class="creation-preview"></div>
+        </div>
+
+        <div id="reappro-area" class="reappro-area">
+          <input id="appro-stock-filter" type="search" placeholder="Rechercher article pour reappro" />
+          <div class="appro-catalog-wrap">
+            <table id="appro-catalog-table">
+              <thead>
+                <tr>
+                  <th>CODE</th>
+                  <th>DESIGNATION</th>
+                  <th>PRIX D'ACHAT</th>
+                  <th>PRIX DE VENTE</th>
+                  <th>Magasin</th>
+                  <th>RESERVE</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="action-modal">
+      <form method="dialog" class="action-modal-form" id="action-form">
+        <h3 id="action-modal-title">Action</h3>
+        <div id="action-fields"></div>
+        <div class="action-modal-footer">
+          <button type="button" id="action-cancel" class="ghost">Annuler</button>
+          <button type="submit" id="action-submit">Valider</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="vente-modal">
+      <div class="vente-shell">
+        <!-- PANNEAU GAUCHE : table ticket + barre de recherche -->
+        <div class="vente-left">
+          <div class="vente-ticket-wrap">
+            <table id="vente-ticket-table">
+              <thead>
+                <tr>
+                  <th class="vth-actions"></th>
+                  <th>Article <span class="th-sort">&#8645;</span></th>
+                  <th>Net <span class="th-sort">&#8645;</span></th>
+                  <th>Qtt <span class="th-sort">&#8645;</span></th>
+                  <th>Unite <span class="th-sort">&#8645;</span></th>
+                  <th>P Vente <span class="th-sort">&#8645;</span></th>
+                  <th>Rem.unit <span class="th-sort">&#8645;</span></th>
+                  <th>Rem.tot <span class="th-sort">&#8645;</span></th>
+                  <th>Montant <span class="th-sort">&#8645;</span></th>
+                  <th class="vth-del"></th>
+                </tr>
+              </thead>
+              <tbody id="vente-ticket-body"></tbody>
+            </table>
+          </div>
+
+          <div class="vente-search-bar">
+            <div class="vente-sb-main">
+              <div class="vente-sb-left">
+                <div class="vente-sb-lbl">CODE</div>
+                <input id="vente-code-input" type="text" autocomplete="off" />
+                <button type="button" id="vente-code-reset" class="vente-code-spin" title="Effacer">&#8635;</button>
+              </div>
+              <div class="vente-sb-right-info">
+                <div class="vente-sb-info-labels">
+                  <span>STOCK</span>
+                  <span>PRIX VENTE</span>
+                </div>
+                <div class="vente-sb-info-vals">
+                  <div id="vente-info-stock" class="vente-info-cell">-</div>
+                  <div id="vente-info-prix" class="vente-info-cell">-</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="vente-suggest-list" class="vente-suggest-list"></div>
+        </div>
+
+        <!-- PANNEAU DROIT : resume + boutons -->
+        <div class="vente-right">
+          <div class="vente-right-header">
+            <div class="vente-pie">&#9685;</div>
+            <div class="vente-sq-row">
+              <span class="vente-sq vente-sq-cyan"></span>
+              <span class="vente-sq vente-sq-green"></span>
+            </div>
+          </div>
+
+          <div class="vente-vendor-block">
+            <div class="vente-vendor-row">Vendeur : <strong>CAISSE</strong></div>
+            <div class="vente-vendor-row">TICKET N&#176; <strong id="vente-ticket-no">000063129</strong></div>
+          </div>
+
+          <div class="vente-totals-block">
+            <div class="vente-trow"><span>TOTAL</span><span id="vd-total">0Ar</span></div>
+            <div class="vente-trow"><span>REMISE</span><span id="vd-remise">0Ar</span></div>
+            <div class="vente-trow vente-trow-apayer"><span>A PAYER</span><span id="vd-apayer">0Ar</span></div>
+            <div class="vente-trow vente-trow-monnaie">
+              <span>MONNAIE</span>
+              <input id="vd-monnaie" type="number" min="0" value="0" />
+            </div>
+            <div class="vente-quick-money">
+              <button class="vqm-btn" data-val="100">100</button>
+              <button class="vqm-btn" data-val="200">200</button>
+              <button class="vqm-btn" data-val="500">500</button>
+              <button class="vqm-btn" data-val="1000">1K</button>
+              <button class="vqm-btn" data-val="2000">2K</button>
+              <button class="vqm-btn" data-val="5000">5K</button>
+              <button class="vqm-btn" data-val="10000">10K</button>
+              <button class="vqm-btn" data-val="20000">20K</button>
+            </div>
+            <div class="vente-trow vente-trow-arendre">
+              <span>A RENDRE</span>
+              <span id="vd-arendre">0Ar</span>
+            </div>
+          </div>
+
+          <div class="vente-client-block">
+            <span>CLIENT</span>
+            <input id="vd-client" type="text" value="CONSOMMATEUR" />
+          </div>
+
+          <div class="vente-act-strip">
+            <button class="vente-act" id="vente-btn-cal" title="Calendrier">&#128197;</button>
+            <button class="vente-act" id="vente-btn-opt" title="Options remise / vendeur">&#9660;</button>
+            <button class="vente-act" id="vente-btn-client" title="Selectionner client">&#128100;</button>
+            <button class="vente-act vente-act-direct" id="vente-btn-sortie" title="Sortie directe sans monnaie">SORTIE<br>DIRECTE</button>
+            <button class="vente-act vente-act-dl" id="vente-btn-valider" title="Valider vente">&#11015;</button>
+          </div>
+
+          <div class="vente-tabs-bar">
+            <button class="vente-ptab" id="vptab-monnaie" data-vptab="monnaie">Monnaie</button>
+            <button class="vente-ptab is-active" id="vptab-menu" data-vptab="menu">Menu</button>
+          </div>
+
+          <div class="vente-panel-content" id="vpc-monnaie" hidden>
+            <p class="vente-np-label">Saisir monnaie</p>
+            <div class="vente-numpad">
+              <button class="vnte-np">7</button>
+              <button class="vnte-np">8</button>
+              <button class="vnte-np">9</button>
+              <button class="vnte-np">4</button>
+              <button class="vnte-np">5</button>
+              <button class="vnte-np">6</button>
+              <button class="vnte-np">1</button>
+              <button class="vnte-np">2</button>
+              <button class="vnte-np">3</button>
+              <button class="vnte-np vnte-np-zero">0</button>
+              <button class="vnte-np">&#9003;</button>
+            </div>
+          </div>
+
+          <div class="vente-panel-content" id="vpc-menu">
+            <div class="vente-chk-row">
+              <label><input type="checkbox" id="vd-blivraison" /> B Livraison</label>
+              <label><input type="checkbox" id="vd-benlevement" checked /> B Enlevement</label>
+            </div>
+            <div class="vente-menu-grid">
+              <button class="vmenu-btn" id="vente-btn-mobile"><span>MOBILE<br>CHEQUE</span><span class="vmenu-ico">&#128179;</span></button>
+              <button class="vmenu-btn vmenu-depense" id="vente-btn-depense"><span>DEPENSE</span><span class="vmenu-ico">&#128200;</span></button>
+              <button class="vmenu-btn" id="vente-btn-credit"><span>CREDIT</span><span class="vmenu-ico">&#9776;</span></button>
+              <button class="vmenu-btn" id="vente-btn-attente"><span>ATTENTE</span><span class="vmenu-ico">&#9201;</span></button>
+              <button class="vmenu-btn" id="vente-btn-vente"><span>VENTE</span><span class="vmenu-ico">&#9776;</span></button>
+              <button class="vmenu-btn" id="vente-btn-liste"><span>LISTE<br>ATTENTE</span><span class="vmenu-ico">&#9201;</span></button>
+            </div>
+            <button class="vente-btn-fermer" id="vente-btn-fermer"><span>FERMER</span><span class="vfermer-ico">&#8617;</span></button>
+          </div>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="liste-client-modal">
+      <div class="lcli-shell">
+        <h2 class="lcli-title">LISTE CLIENT</h2>
+        <div class="lcli-search-wrap">
+          <span class="lcli-search-lbl">RECHERCHE</span>
+          <input id="lcli-search-input" type="text" placeholder="Nom client..." autocomplete="off" />
+        </div>
+        <div class="lcli-table-wrap">
+          <table id="lcli-table">
+            <colgroup>
+              <col style="width: 70%;">
+              <col style="width: 30%;">
+            </colgroup>
+            <thead>
+              <tr>
+                <th>NOM CLIENT</th>
+                <th>IMPAYER</th>
+              </tr>
+            </thead>
+            <tbody id="lcli-body"></tbody>
+          </table>
+        </div>
+        <div class="lcli-footer">
+          <button id="lcli-btn-selectioner" class="lcli-btn lcli-btn-primary">Selectioner &#9205;</button>
+          <button id="lcli-btn-encaisser" class="lcli-btn lcli-btn-success">Encaisser &#8595;</button>
+          <button id="lcli-btn-creer" class="lcli-btn lcli-btn-info" style="display:none;">Creer &#10010;</button>
+          <button id="lcli-btn-annuler" class="lcli-btn lcli-btn-secondary">Annuler &#10005;</button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="liste-vente-modal">
+      <div class="lv-shell">
+        <div class="lv-header">
+          <h2 class="lv-title">Liste Vente</h2>
+          <div class="lv-hinfo">
+            <label class="lv-hlabel">Date <input id="lv-date-input" type="date" /></label>
+            <span class="lv-hstat">Remise <strong id="lv-remise-total">0 Ar</strong></span>
+            <span class="lv-hca">CA <strong id="lv-ca-total">0 Ar</strong></span>
+          </div>
+          <div class="lv-hbtns">
+            <button id="lv-btn-print-h" title="Imprimer">&#128438;</button>
+            <button id="lv-btn-close-h" title="Fermer">&#9211;</button>
+            <button class="lv-hdots">&#8943;</button>
+          </div>
+        </div>
+
+        <div class="lv-body">
+          <!-- Table des ventes + sidebar -->
+          <div class="lv-top-section">
+            <div class="lv-top-wrap">
+              <table id="lv-ventes-table">
+                <thead>
+                  <tr>
+                    <th>N&#176; Vente <span class="th-sort">&#8645;</span></th>
+                    <th>Heure</th>
+                    <th>Client <span class="th-sort">&#8645;</span></th>
+                    <th>Montant</th>
+                    <th>Remise <span class="th-sort">&#8645;</span></th>
+                    <th>A Payer <span class="th-sort">&#8645;</span></th>
+                    <th>Vendeur <span class="th-sort">&#8645;</span></th>
+                    <th>Mode <span class="th-sort">&#8645;</span></th>
+                    <th>Pc <span class="th-sort">&#8645;</span></th>
+                    <th class="lv-th-suppr">Suppr &#9988;</th>
+                  </tr>
+                </thead>
+                <tbody id="lv-ventes-body"></tbody>
+              </table>
+            </div>
+            <div class="lv-sidebar">
+              <button id="lv-btn-imprimer" class="lv-sb-btn">Imprimer &#9660;</button>
+              <button id="lv-btn-fermer" class="lv-sb-btn lv-sb-close">Fermer &#10005;</button>
+            </div>
+          </div>
+
+          <!-- Detail du ticket selectionne -->
+          <div class="lv-bottom-section">
+            <div class="lv-bottom-wrap">
+              <table id="lv-detail-table">
+                <thead>
+                  <tr>
+                    <th>D&#233;signation <span class="th-sort">&#8645;</span></th>
+                    <th>Qt&#233;</th>
+                    <th>Remise</th>
+                    <th>Prix Vente</th>
+                    <th>Prix remis&#233; <span class="th-sort">&#8645;</span></th>
+                    <th>Tot Remise</th>
+                    <th>Montant</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="lv-detail-body"></tbody>
+              </table>
+            </div>
+            <div class="lv-total-row">
+              <span class="lv-total-label">TOTAL</span>
+              <span id="lv-detail-total">0 Ar</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="qty-pad-modal">
+      <div class="qpad-shell">
+        <div class="qpad-header">
+          <span class="qpad-article-name" id="qpad-article-name">Article</span>
+          <span class="qpad-stock-info" id="qpad-stock-info">Stock: -</span>
+        </div>
+        <div class="qpad-display" id="qpad-display">0</div>
+        <div class="qpad-grid">
+          <button class="qpad-btn" data-val="7">7</button>
+          <button class="qpad-btn" data-val="8">8</button>
+          <button class="qpad-btn" data-val="9">9</button>
+          <button class="qpad-btn" data-val="4">4</button>
+          <button class="qpad-btn" data-val="5">5</button>
+          <button class="qpad-btn" data-val="6">6</button>
+          <button class="qpad-btn" data-val="1">1</button>
+          <button class="qpad-btn" data-val="2">2</button>
+          <button class="qpad-btn" data-val="3">3</button>
+          <button class="qpad-btn qpad-clear" data-val="C">C</button>
+          <button class="qpad-btn qpad-zero" data-val="0">0</button>
+          <button class="qpad-btn qpad-back" data-val="⌫">⌫</button>
+        </div>
+        <div class="qpad-footer">
+          <button id="qpad-btn-ok" class="qpad-btn-ok">OK &#10003;</button>
+          <button id="qpad-btn-cancel" class="qpad-btn-cancel">Annuler &#10005;</button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="liste-attente-modal">
+      <div class="la-shell">
+        <h2 class="la-title">TICKETS EN ATTENTE</h2>
+        <div class="la-top-section">
+          <table id="la-table">
+            <thead>
+              <tr>
+                <th>N° TICKET</th>
+                <th>CLIENT</th>
+              </tr>
+            </thead>
+            <tbody id="la-body"></tbody>
+          </table>
+        </div>
+        <div class="la-bottom-section">
+          <div class="la-articles-header">ARTICLES</div>
+          <table id="la-articles-table">
+            <thead>
+              <tr>
+                <th>DESIGNATION</th>
+                <th>QTE</th>
+                <th>MONTANT</th>
+              </tr>
+            </thead>
+            <tbody id="la-articles-body"></tbody>
+          </table>
+        </div>
+        <div class="la-footer">
+          <button id="la-btn-reprendre" class="la-btn la-btn-primary">Reprendre &#8595;</button>
+          <button id="la-btn-supprimer" class="la-btn la-btn-danger">Supprimer &#128465;</button>
+          <button id="la-btn-annuler" class="la-btn la-btn-secondary">Annuler &#10005;</button>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- LOGIN MODAL -->
+    <dialog id="login-modal" class="login-modal-wrapper">
+      <div class="login-container">
+        <h1 class="login-title">Magasin POS</h1>
+        <form id="login-form" class="login-form">
+          <div class="login-group">
+            <label for="login-username">Utilisateur</label>
+            <input id="login-username" type="text" placeholder="Nom utilisateur" autocomplete="off" required autofocus />
+          </div>
+          <div class="login-group">
+            <label for="login-password">Mot de passe</label>
+            <input id="login-password" type="password" placeholder="Mot de passe" autocomplete="off" required />
+          </div>
+          <div class="login-error" id="login-error"></div>
+          <button type="submit" class="login-btn-submit">Connexion</button>
+        </form>
+      </div>
+    </dialog>
+
+    <!-- ADMIN PANEL MODAL -->
+    <dialog id="admin-panel-modal" class="admin-modal-wrapper">
+      <div class="admin-container">
+        <h2 class="admin-title">Panneau Admin</h2>
+        <div class="admin-tabs">
+          <button type="button" class="admin-tab is-active" data-tab="users">Gestion des utilisateurs</button>
+          <button type="button" class="admin-tab" data-tab="settings">Changer mot de passe</button>
+        </div>
+
+        <!-- Tab: Gestion des utilisateurs -->
+        <div class="admin-tab-content is-active" data-tab="users">
+          <h3>Créer un compte caisse</h3>
+          <form id="create-user-form" class="admin-form">
+            <div class="admin-form-group">
+              <label for="new-user-name">Nom utilisateur</label>
+              <input id="new-user-name" type="text" placeholder="Nom du caissier" required />
+            </div>
+            <div class="admin-form-group">
+              <label for="new-user-password">Mot de passe initial</label>
+              <input id="new-user-password" type="password" placeholder="Mot de passe" required />
+            </div>
+            <div class="admin-form-group">
+              <label for="new-user-role">
+                <input type="checkbox" id="new-user-role" />
+                Compte Admin
+              </label>
+            </div>
+            <button type="submit" class="admin-btn-primary">Créer utilisateur</button>
+          </form>
+
+          <h3 style="margin-top: 30px;">Liste des utilisateurs</h3>
+          <div id="users-list" class="users-list"></div>
+        </div>
+
+        <!-- Tab: Changer mot de passe -->
+        <div class="admin-tab-content" data-tab="settings">
+          <h3>Changer mot de passe</h3>
+          <form id="change-password-form" class="admin-form">
+            <div class="admin-form-group">
+              <label for="current-password">Mot de passe actuel</label>
+              <input id="current-password" type="password" placeholder="Mot de passe actuel" required />
+            </div>
+            <div class="admin-form-group">
+              <label for="new-password">Nouveau mot de passe</label>
+              <input id="new-password" type="password" placeholder="Nouveau mot de passe" required />
+            </div>
+            <div class="admin-form-group">
+              <label for="confirm-password">Confirmer mot de passe</label>
+              <input id="confirm-password" type="password" placeholder="Confirmer mot de passe" required />
+            </div>
+            <div id="password-error" class="form-error"></div>
+            <button type="submit" class="admin-btn-primary">Changer mot de passe</button>
+          </form>
+        </div>
+
+        <div class="admin-footer">
+          <button type="button" id="admin-close-btn" class="admin-btn-secondary">Fermer</button>
+        </div>
+      </div>
+    </dialog>
+
+    <script src="app.js"></script>
+  </body>
+</html>
